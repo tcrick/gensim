@@ -49,7 +49,7 @@ cdef our_saxpy_ptr our_saxpy
 
 
 cdef struct Word2VecConfig:
-    int hs, negative, sample, compute_loss, size, window, cbow_mean, workers
+    int hs, negative, sample, compute_loss, size, window, cbow_mean, workers, learn_hidden, learn_vectors
     REAL_t running_training_loss, alpha
 
     REAL_t *syn0

@@ -204,7 +204,8 @@ except ImportError:
                     # don't train on the `word` itself
                     if pos2 != pos:
                         train_sg_pair(
-                            model, model.wv.index2word[word.index], word2.index, alpha, compute_loss=compute_loss
+                            model, model.wv.index2word[word.index], word2.index, alpha, compute_loss=compute_loss,
+                            learn_hidden=model.learn_hidden, learn_vectors=model.learn_vectors
                         )
 
             result += len(word_vocabs)
@@ -256,7 +257,10 @@ except ImportError:
                 l1 = np_sum(model.wv.syn0[word2_indices], axis=0)  # 1 x vector_size
                 if word2_indices and model.cbow_mean:
                     l1 /= len(word2_indices)
-                train_cbow_pair(model, word, word2_indices, l1, alpha, compute_loss=compute_loss)
+                train_cbow_pair(
+                    model, word, word2_indices, l1, alpha, compute_loss=compute_loss,
+                    learn_hidden=model.learn_hidden, learn_vectors=model.learn_vectors
+                )
             result += len(word_vocabs)
         return result
 
@@ -284,8 +288,8 @@ except ImportError:
 
         """
         log_prob_sentence = 0.0
-        if model.negative:
-            raise RuntimeError("scoring is only available for HS=True")
+        #if model.negative:
+        #    raise RuntimeError("scoring is only available for HS=True")
 
         word_vocabs = [model.wv.vocab[w] for w in sentence if w in model.wv.vocab]
         for pos, word in enumerate(word_vocabs):
@@ -327,8 +331,8 @@ except ImportError:
 
         """
         log_prob_sentence = 0.0
-        if model.negative:
-            raise RuntimeError("scoring is only available for HS=True")
+        #if model.negative:
+        #    raise RuntimeError("scoring is only available for HS=True")
 
         word_vocabs = [model.wv.vocab[w] for w in sentence if w in model.wv.vocab]
         for pos, word in enumerate(word_vocabs):
@@ -590,10 +594,23 @@ def score_sg_pair(model, word, word2):
 
     """
     l1 = model.wv.syn0[word2.index]
-    l2a = deepcopy(model.syn1[word.point])  # 2d matrix, codelen x layer1_size
-    sgn = (-1.0) ** word.code  # ch function, 0-> 1, 1 -> -1
-    lprob = -logaddexp(0, -sgn * dot(l1, l2a.T))
-    return sum(lprob)
+    if model.hs:
+        l2a = deepcopy(model.syn1[word.point])  # 2d matrix, codelen x layer1_size
+        sgn = (-1.0)**word.code  # ch function, 0-> 1, 1 -> -1
+        lprob = sum(-logaddexp(0, -sgn * dot(l1, l2a.T)))
+
+    if model.negative:
+        predict_word = model.wv.vocab[word]
+        word_indices = [predict_word.index]
+        while len(word_indices) < model.negative + 1:
+            w = model.cum_table.searchsorted(model.random.randint(model.cum_table[-1]))
+            if w != predict_word.index:
+                word_indices.append(w)
+        l2b = model.syn1neg[word_indices]
+        prod_term = dot(l1, l2b.T)
+        lprob = -logaddexp(0, -prod_term[0])
+        lprob = sum(logaddexp(0, prod_term[1:])) / model.negative
+    return lprob
 
 
 def score_cbow_pair(model, word, l1):
@@ -614,10 +631,22 @@ def score_cbow_pair(model, word, l1):
         Logarithm of the sum of exponentiations of input words.
 
     """
-    l2a = model.syn1[word.point]  # 2d matrix, codelen x layer1_size
-    sgn = (-1.0) ** word.code  # ch function, 0-> 1, 1 -> -1
-    lprob = -logaddexp(0, -sgn * dot(l1, l2a.T))
-    return sum(lprob)
+    if model.hs:
+        l2a = model.syn1[word.point]  # 2d matrix, codelen x layer1_size
+        sgn = (-1.0)**word.code  # ch function, 0-> 1, 1 -> -1
+        lprob = sum(-logaddexp(0, -sgn * dot(l1, l2a.T)))
+
+    if model.negative:
+        word_indices = [word.index]
+        while len(word_indices) < model.negative + 1:
+            w = model.cum_table.searchsorted(model.random.randint(model.cum_table[-1]))
+            if w != word.index:
+                word_indices.append(w)
+        l2b = model.syn1neg[word_indices]
+        prod_term = dot(l1, l2b.T)
+        lprob = -logaddexp(0, -prod_term[0])
+        lprob -= sum(logaddexp(0, prod_term[1:])) / model.negative
+    return lprob
 
 
 class Word2Vec(BaseWordEmbeddingsModel):
