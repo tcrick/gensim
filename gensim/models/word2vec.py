@@ -140,7 +140,7 @@ except ImportError:
 
 from numpy import exp, dot, zeros, random, dtype, float32 as REAL,\
     uint32, seterr, array, uint8, vstack, fromstring, sqrt,\
-    empty, sum as np_sum, ones, logaddexp, log, outer
+    empty, sum as np_sum, ones, logaddexp, log, outer, get_include
 
 from scipy.special import expit
 
@@ -152,6 +152,9 @@ from six.moves import xrange
 logger = logging.getLogger(__name__)
 
 try:
+    import pyximport
+    models_dir = os.path.dirname(__file__) or os.getcwd()
+    pyximport.install(setup_args={"include_dirs": [models_dir, get_include()]})
     from gensim.models.word2vec_inner import train_batch_sg, train_batch_cbow
     from gensim.models.word2vec_inner import score_sentence_sg, score_sentence_cbow
     from gensim.models.word2vec_inner import FAST_VERSION, MAX_WORDS_IN_BATCH
@@ -687,7 +690,7 @@ class Word2Vec(BaseWordEmbeddingsModel):
                  max_vocab_size=None, sample=1e-3, seed=1, workers=3, min_alpha=0.0001,
                  sg=0, hs=0, negative=5, ns_exponent=0.75, cbow_mean=1, hashfxn=hash, iter=5, null_word=0,
                  trim_rule=None, sorted_vocab=1, batch_words=MAX_WORDS_IN_BATCH, compute_loss=False, callbacks=(),
-                 max_final_vocab=None):
+                 max_final_vocab=None, learn_hidden=True, learn_vectors=True):
         """
 
         Parameters
@@ -802,6 +805,9 @@ class Word2Vec(BaseWordEmbeddingsModel):
             max_vocab_size=max_vocab_size, min_count=min_count, sample=sample, sorted_vocab=bool(sorted_vocab),
             null_word=null_word, max_final_vocab=max_final_vocab, ns_exponent=ns_exponent)
         self.trainables = Word2VecTrainables(seed=seed, vector_size=size, hashfxn=hashfxn)
+        self.learn_hidden = learn_hidden
+        self.learn_vectors = learn_vectors
+
 
         super(Word2Vec, self).__init__(
             sentences=sentences, corpus_file=corpus_file, workers=workers, vector_size=size, epochs=iter,
@@ -984,11 +990,11 @@ class Word2Vec(BaseWordEmbeddingsModel):
         if not self.wv.vocab:
             raise RuntimeError("you must first build vocabulary before scoring new data")
 
-        if not self.hs:
-            raise RuntimeError(
-                "We have currently only implemented score for the hierarchical softmax scheme, "
-                "so you need to have run word2vec with hs=1 and negative=0 for this to work."
-            )
+        # if not self.hs:
+        #     raise RuntimeError(
+        #         "We have currently only implemented score for the hierarchical softmax scheme, "
+        #         "so you need to have run word2vec with hs=1 and negative=0 for this to work."
+        #     )
 
         def worker_loop():
             """Compute log probability for each sentence, lifting lists of sentences from the jobs queue."""

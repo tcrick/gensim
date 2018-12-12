@@ -87,7 +87,7 @@ cdef void w2v_fast_sentence_sg_hs(
     const np.uint32_t *word_point, const np.uint8_t *word_code, const int codelen,
     REAL_t *syn0, REAL_t *syn1, const int size,
     const np.uint32_t word2_index, const REAL_t alpha, REAL_t *work, REAL_t *word_locks,
-    const int _compute_loss, REAL_t *_running_training_loss_param
+    const int _compute_loss, REAL_t *_running_training_loss_param,
     const int learn_hidden, const int learn_vectors) nogil:
     """Train on a single effective word from the current batch, using the Skip-Gram model.
 
@@ -175,7 +175,7 @@ cdef unsigned long long w2v_fast_sentence_sg_neg(
     REAL_t *syn0, REAL_t *syn1neg, const int size, const np.uint32_t word_index,
     const np.uint32_t word2_index, const REAL_t alpha, REAL_t *work,
     unsigned long long next_random, REAL_t *word_locks,
-    const int _compute_loss, REAL_t *_running_training_loss_param
+    const int _compute_loss, REAL_t *_running_training_loss_param,
     const int learn_hidden, const int learn_vectors) nogil:
     """Train on a single effective word from the current batch, using the Skip-Gram model.
 
@@ -268,7 +268,7 @@ cdef void w2v_fast_sentence_cbow_hs(
     REAL_t *neu1, REAL_t *syn0, REAL_t *syn1, const int size,
     const np.uint32_t indexes[MAX_SENTENCE_LEN], const REAL_t alpha, REAL_t *work,
     int i, int j, int k, int cbow_mean, REAL_t *word_locks,
-    const int _compute_loss, REAL_t *_running_training_loss_param
+    const int _compute_loss, REAL_t *_running_training_loss_param,
     const int learn_hidden, const int learn_vectors) nogil:
     """Train on a single effective word from the current batch, using the CBOW method.
 
@@ -369,7 +369,7 @@ cdef unsigned long long w2v_fast_sentence_cbow_neg(
     REAL_t *neu1,  REAL_t *syn0, REAL_t *syn1neg, const int size,
     const np.uint32_t indexes[MAX_SENTENCE_LEN], const REAL_t alpha, REAL_t *work,
     int i, int j, int k, int cbow_mean, unsigned long long next_random, REAL_t *word_locks,
-    const int _compute_loss, REAL_t *_running_training_loss_param
+    const int _compute_loss, REAL_t *_running_training_loss_param,
     const int learn_hidden, const int learn_vectors) nogil:
     """Train on a single effective word from the current batch, using the CBOW method.
 
@@ -876,7 +876,7 @@ def score_sentence_cbow(model, sentence, _work, _neu1):
             if c.hs:
                 score_pair_cbow_hs(c.points[i], c.codes[i], c.codelens, c.neu1, c.syn0, c.syn1, c.size, c.indexes, c.work, i, j, k, c.cbow_mean)
             if c.negative:
-                c.next_random = score_pair_cbow_neg(c.negative, c.cum_table, c.cum_table_len, c.neu1, c.syn0, c.syn1neg, c.size, c.indexes, c.work, i, j, k, c.cbow_mean)
+                c.next_random = score_pair_cbow_neg(c.negative, c.cum_table, c.cum_table_len, c.neu1, c.syn0, c.syn1neg, c.size, c.indexes, c.work, i, j, k, c.cbow_mean, c.next_random)
 
     return c.work[0]
 

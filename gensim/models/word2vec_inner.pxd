@@ -95,7 +95,7 @@ cdef void w2v_fast_sentence_sg_hs(
     const np.uint32_t *word_point, const np.uint8_t *word_code, const int codelen,
     REAL_t *syn0, REAL_t *syn1, const int size,
     const np.uint32_t word2_index, const REAL_t alpha, REAL_t *work, REAL_t *word_locks,
-    const int _compute_loss, REAL_t *_running_training_loss_param) nogil
+    const int _compute_loss, REAL_t *_running_training_loss_param, const int learn_hidden, const int learn_vectors) nogil
 
 
 cdef unsigned long long w2v_fast_sentence_sg_neg(
@@ -103,7 +103,7 @@ cdef unsigned long long w2v_fast_sentence_sg_neg(
     REAL_t *syn0, REAL_t *syn1neg, const int size, const np.uint32_t word_index,
     const np.uint32_t word2_index, const REAL_t alpha, REAL_t *work,
     unsigned long long next_random, REAL_t *word_locks,
-    const int _compute_loss, REAL_t *_running_training_loss_param) nogil
+    const int _compute_loss, REAL_t *_running_training_loss_param, const int learn_hidden, const int learn_vectors) nogil
 
 
 cdef void w2v_fast_sentence_cbow_hs(
@@ -111,7 +111,7 @@ cdef void w2v_fast_sentence_cbow_hs(
     REAL_t *neu1, REAL_t *syn0, REAL_t *syn1, const int size,
     const np.uint32_t indexes[MAX_SENTENCE_LEN], const REAL_t alpha, REAL_t *work,
     int i, int j, int k, int cbow_mean, REAL_t *word_locks,
-    const int _compute_loss, REAL_t *_running_training_loss_param) nogil
+    const int _compute_loss, REAL_t *_running_training_loss_param, const int learn_hidden, const int learn_vectors) nogil
 
 
 cdef unsigned long long w2v_fast_sentence_cbow_neg(
@@ -119,7 +119,7 @@ cdef unsigned long long w2v_fast_sentence_cbow_neg(
     REAL_t *neu1,  REAL_t *syn0, REAL_t *syn1neg, const int size,
     const np.uint32_t indexes[MAX_SENTENCE_LEN], const REAL_t alpha, REAL_t *work,
     int i, int j, int k, int cbow_mean, unsigned long long next_random, REAL_t *word_locks,
-    const int _compute_loss, REAL_t *_running_training_loss_param) nogil
+    const int _compute_loss, REAL_t *_running_training_loss_param, const int learn_hidden, const int learn_vectors) nogil
 
 
 cdef init_w2v_config(Word2VecConfig *c, model, alpha, compute_loss, _work, _neu1=*)
