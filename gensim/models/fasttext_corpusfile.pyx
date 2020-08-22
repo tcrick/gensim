@@ -122,8 +122,8 @@ def train_epoch_sg(
     # For learning rate updates
     cdef int cur_epoch = _cur_epoch
     cdef int num_epochs = model.epochs
-    cdef int expected_examples = (-1 if _expected_examples is None else _expected_examples)
-    cdef int expected_words = (-1 if _expected_words is None else _expected_words)
+    cdef long long expected_examples = (-1 if _expected_examples is None else _expected_examples)
+    cdef long long expected_words = (-1 if _expected_words is None else _expected_words)
     cdef REAL_t start_alpha = model.alpha
     cdef REAL_t end_alpha = model.min_alpha
     cdef REAL_t _alpha = get_alpha(model.alpha, end_alpha, cur_epoch, num_epochs)
@@ -133,7 +133,8 @@ def train_epoch_sg(
 
     cdef int i, j, k
     cdef int effective_words = 0, effective_sentences = 0
-    cdef int total_effective_words = 0, total_sentences = 0, total_words = 0
+    cdef long long total_sentences = 0
+    cdef long long total_effective_words = 0, total_words = 0
     cdef int sent_idx, idx_start, idx_end
 
     init_ft_config(&c, model, _alpha, _work, _l1)
@@ -217,8 +218,8 @@ def train_epoch_cbow(model, corpus_file, offset, _cython_vocab, _cur_epoch, _exp
     # For learning rate updates
     cdef int cur_epoch = _cur_epoch
     cdef int num_epochs = model.epochs
-    cdef int expected_examples = (-1 if _expected_examples is None else _expected_examples)
-    cdef int expected_words = (-1 if _expected_words is None else _expected_words)
+    cdef long long expected_examples = (-1 if _expected_examples is None else _expected_examples)
+    cdef long long expected_words = (-1 if _expected_words is None else _expected_words)
     cdef REAL_t start_alpha = model.alpha
     cdef REAL_t end_alpha = model.min_alpha
     cdef REAL_t _alpha = get_alpha(model.alpha, end_alpha, cur_epoch, num_epochs)
@@ -228,7 +229,8 @@ def train_epoch_cbow(model, corpus_file, offset, _cython_vocab, _cur_epoch, _exp
 
     cdef int i, j, k
     cdef int effective_words = 0, effective_sentences = 0
-    cdef int total_effective_words = 0, total_sentences = 0, total_words = 0
+    cdef long long total_sentences = 0
+    cdef long long total_effective_words = 0, total_words = 0
     cdef int sent_idx, idx_start, idx_end
 
     init_ft_config(&c, model, _alpha, _work, _neu1)
