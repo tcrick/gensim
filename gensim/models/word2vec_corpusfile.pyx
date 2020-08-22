@@ -230,8 +230,8 @@ cdef REAL_t get_alpha(REAL_t alpha, REAL_t end_alpha, int cur_epoch, int num_epo
 
 
 cdef REAL_t get_next_alpha(
-        REAL_t start_alpha, REAL_t end_alpha, int total_examples, int total_words,
-        int expected_examples, int expected_words, int cur_epoch, int num_epochs) nogil:
+        REAL_t start_alpha, REAL_t end_alpha, long long total_examples, long long total_words,
+        long long expected_examples, long long expected_words, int cur_epoch, int num_epochs) nogil:
     cdef REAL_t epoch_progress
 
     if expected_examples != -1:
@@ -256,8 +256,8 @@ def train_epoch_sg(model, corpus_file, offset, _cython_vocab, _cur_epoch, _expec
     ----------
     model : :class:`~gensim.models.word2vec.Word2Vec`
         The Word2Vec model instance to train.
-    input_stream : iterable of list of str
-        The corpus used to train the model.
+    corpus_file : str
+        Path to corpus file.
     _cur_epoch : int
         Current epoch number. Used for calculating and decaying learning rate.
     _work : np.ndarray
@@ -278,8 +278,8 @@ def train_epoch_sg(model, corpus_file, offset, _cython_vocab, _cur_epoch, _expec
     # For learning rate updates
     cdef int cur_epoch = _cur_epoch
     cdef int num_epochs = model.epochs
-    cdef int expected_examples = (-1 if _expected_examples is None else _expected_examples)
-    cdef int expected_words = (-1 if _expected_words is None else _expected_words)
+    cdef long long expected_examples = (-1 if _expected_examples is None else _expected_examples)
+    cdef long long expected_words = (-1 if _expected_words is None else _expected_words)
     cdef REAL_t start_alpha = model.alpha
     cdef REAL_t end_alpha = model.min_alpha
     cdef REAL_t _alpha = get_alpha(model.alpha, end_alpha, cur_epoch, num_epochs)
@@ -289,7 +289,8 @@ def train_epoch_sg(model, corpus_file, offset, _cython_vocab, _cur_epoch, _expec
 
     cdef int i, j, k
     cdef int effective_words = 0, effective_sentences = 0
-    cdef int total_effective_words = 0, total_sentences = 0, total_words = 0
+    cdef long long total_sentences = 0
+    cdef long long total_effective_words = 0, total_words = 0
     cdef int sent_idx, idx_start, idx_end
 
     init_w2v_config(&c, model, _alpha, compute_loss, _work)
@@ -353,8 +354,8 @@ def train_epoch_cbow(model, corpus_file, offset, _cython_vocab, _cur_epoch, _exp
     ----------
     model : :class:`~gensim.models.word2vec.Word2Vec`
         The Word2Vec model instance to train.
-    input_stream : iterable of list of str
-        The corpus used to train the model.
+    corpus_file : str
+        Path to corpus file.
     _cur_epoch : int
         Current epoch number. Used for calculating and decaying learning rate.
     _work : np.ndarray
@@ -375,8 +376,8 @@ def train_epoch_cbow(model, corpus_file, offset, _cython_vocab, _cur_epoch, _exp
     # For learning rate updates
     cdef int cur_epoch = _cur_epoch
     cdef int num_epochs = model.epochs
-    cdef int expected_examples = (-1 if _expected_examples is None else _expected_examples)
-    cdef int expected_words = (-1 if _expected_words is None else _expected_words)
+    cdef long long expected_examples = (-1 if _expected_examples is None else _expected_examples)
+    cdef long long expected_words = (-1 if _expected_words is None else _expected_words)
     cdef REAL_t start_alpha = model.alpha
     cdef REAL_t end_alpha = model.min_alpha
     cdef REAL_t _alpha = get_alpha(model.alpha, end_alpha, cur_epoch, num_epochs)
@@ -386,7 +387,8 @@ def train_epoch_cbow(model, corpus_file, offset, _cython_vocab, _cur_epoch, _exp
 
     cdef int i, j, k
     cdef int effective_words = 0, effective_sentences = 0
-    cdef int total_effective_words = 0, total_sentences = 0, total_words = 0
+    cdef long long total_sentences = 0
+    cdef long long total_effective_words = 0, total_words = 0
     cdef int sent_idx, idx_start, idx_end
 
     init_w2v_config(&c, model, _alpha, compute_loss, _work, _neu1)
