@@ -54,7 +54,7 @@ cdef int ONE = 1
 cdef REAL_t ONEF = <REAL_t>1.0
 
 
-cdef void prepare_c_structures_for_batch(vector[string] &doc_words, int sample, int hs, int window, int *total_words,
+cdef void prepare_c_structures_for_batch(vector[string] &doc_words, int sample, int hs, int window, long long *total_words,
                                          int *effective_words, unsigned long long *next_random, cvocab_t *vocab,
                                          np.uint32_t *indexes, int *codelens, np.uint8_t **codes, np.uint32_t **points,
                                          np.uint32_t *reduced_windows, int *document_len, int train_words,
