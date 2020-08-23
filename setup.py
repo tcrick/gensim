@@ -25,7 +25,6 @@ c_extensions = {
     'gensim.corpora._mmreader': 'gensim/corpora/_mmreader.c',
     'gensim.models.fasttext_inner': 'gensim/models/fasttext_inner.c',
     'gensim._matutils': 'gensim/_matutils.c',
-    'gensim.models.doc2vec_inner': 'gensim/models/doc2vec_inner.c',
 }
 
 cpp_extensions = {
