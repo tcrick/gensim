@@ -181,8 +181,8 @@ cdef class CythonLineSentence:
 
 cdef void prepare_c_structures_for_batch(
         vector[vector[string]] &sentences, int sample, int hs, int window, long long *total_words,
-        int *effective_words, int *effective_sentences, unsigned long long *next_random,
-        cvocab_t *vocab, int *sentence_idx, np.uint32_t *indexes, int *codelens,
+        long long *effective_words, long long *effective_sentences, unsigned long long *next_random,
+        cvocab_t *vocab, long long *sentence_idx, np.uint32_t *indexes, long long *codelens,
         np.uint8_t **codes, np.uint32_t **points, np.uint32_t *reduced_windows) nogil:
     cdef VocabItem word
     cdef string token
@@ -288,10 +288,10 @@ def train_epoch_sg(model, corpus_file, offset, _cython_vocab, _cur_epoch, _expec
     cdef CythonVocab vocab = _cython_vocab
 
     cdef int i, j, k
-    cdef int effective_words = 0, effective_sentences = 0
+    cdef long long effective_words = 0, effective_sentences = 0
     cdef long long total_sentences = 0
     cdef long long total_effective_words = 0, total_words = 0
-    cdef int sent_idx, idx_start, idx_end
+    cdef long long sent_idx, idx_start, idx_end
 
     init_w2v_config(&c, model, _alpha, compute_loss, _work)
 
@@ -386,10 +386,10 @@ def train_epoch_cbow(model, corpus_file, offset, _cython_vocab, _cur_epoch, _exp
     cdef CythonVocab vocab = _cython_vocab
 
     cdef int i, j, k
-    cdef int effective_words = 0, effective_sentences = 0
+    cdef long long effective_words = 0, effective_sentences = 0
     cdef long long total_sentences = 0
     cdef long long total_effective_words = 0, total_words = 0
-    cdef int sent_idx, idx_start, idx_end
+    cdef long long sent_idx, idx_start, idx_end
 
     init_w2v_config(&c, model, _alpha, compute_loss, _work, _neu1)
 
