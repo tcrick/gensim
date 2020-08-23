@@ -180,7 +180,7 @@ cdef class CythonLineSentence:
 
 
 cdef void prepare_c_structures_for_batch(
-        vector[vector[string]] &sentences, int sample, int hs, int window, int *total_words,
+        vector[vector[string]] &sentences, int sample, int hs, int window, long long *total_words,
         int *effective_words, int *effective_sentences, unsigned long long *next_random,
         cvocab_t *vocab, int *sentence_idx, np.uint32_t *indexes, int *codelens,
         np.uint8_t **codes, np.uint32_t **points, np.uint32_t *reduced_windows) nogil:
