@@ -85,7 +85,7 @@ And on word analogies:
     >>> analogies_result = model.wv.evaluate_word_analogies(datapath('questions-words.txt'))
 
 """
-
+import os
 import logging
 import struct
 
