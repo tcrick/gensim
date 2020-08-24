@@ -90,7 +90,7 @@ import logging
 import struct
 
 import numpy as np
-from numpy import ones, vstack, empty, float32 as REAL, sum as np_sum
+from numpy import ones, vstack, empty, float32 as REAL, sum as np_sum, get_include
 
 from gensim.models.word2vec import Word2VecVocab, Word2VecTrainables, train_sg_pair, train_cbow_pair
 from gensim.models.keyedvectors import Vocab, FastTextKeyedVectors
@@ -102,6 +102,10 @@ from gensim.utils import deprecated, call_on_class_only
 logger = logging.getLogger(__name__)
 
 try:
+    import pyximport
+    models_dir = os.path.dirname(__file__) or os.getcwd()
+    pyximport.install(setup_args={"include_dirs": [models_dir, get_include()]})
+    
     from gensim.models.fasttext_inner import train_batch_sg, train_batch_cbow
     from gensim.models.fasttext_inner import FAST_VERSION, MAX_WORDS_IN_BATCH
 
@@ -164,7 +168,7 @@ except ImportError:
                     l1 /= (len(subwords_indices[0]) + len(subwords_indices[1]))
 
                 # train on the sliding window for target word
-                train_cbow_pair(model, word, subwords_indices, l1, alpha, is_ft=True)
+                train_cbow_pair(model, word, subwords_indices, l1, alpha, is_ft=True, learn_hidden = model.learn_hidden, learn_vectors = model.learn_vectors)
             result += len(word_vocabs)
         return result
 
@@ -211,7 +215,7 @@ except ImportError:
 
                 for pos2, word2 in enumerate(word_vocabs[start:(pos + model.window + 1 - reduced_window)], start):
                     if pos2 != pos:  # don't train on the `word` itself
-                        train_sg_pair(model, model.wv.index2word[word2.index], subwords_indices, alpha, is_ft=True)
+                        train_sg_pair(model, model.wv.index2word[word2.index], subwords_indices, alpha, is_ft=True, learn_hidden = model.learn_hidden, learn_vectors = model.learn_vectors)
 
             result += len(word_vocabs)
         return result
@@ -270,7 +274,7 @@ class FastText(BaseWordEmbeddingsModel):
     def __init__(self, sentences=None, corpus_file=None, sg=0, hs=0, size=100, alpha=0.025, window=5, min_count=5,
                  max_vocab_size=None, word_ngrams=1, sample=1e-3, seed=1, workers=3, min_alpha=0.0001,
                  negative=5, ns_exponent=0.75, cbow_mean=1, hashfxn=hash, iter=5, null_word=0, min_n=3, max_n=6,
-                 sorted_vocab=1, bucket=2000000, trim_rule=None, batch_words=MAX_WORDS_IN_BATCH, callbacks=()):
+                 sorted_vocab=1, bucket=2000000, trim_rule=None, batch_words=MAX_WORDS_IN_BATCH, callbacks=(), learn_hidden = True, learn_vectors = True):
         """
 
         Parameters
@@ -393,6 +397,8 @@ class FastText(BaseWordEmbeddingsModel):
             sorted_vocab=bool(sorted_vocab), null_word=null_word, ns_exponent=ns_exponent)
         self.trainables = FastTextTrainables(
             vector_size=size, seed=seed, bucket=bucket, hashfxn=hashfxn)
+        self.learn_hidden = learn_hidden
+        self.learn_vectors = learn_vectors
         self.wv.bucket = self.trainables.bucket
 
         super(FastText, self).__init__(

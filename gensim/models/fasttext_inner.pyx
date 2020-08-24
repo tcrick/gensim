@@ -12,7 +12,7 @@ import numpy as np
 cimport numpy as np
 
 from libc.math cimport exp
-from libc.math cimport log
+from libc.math cimport log, log1p
 from libc.string cimport memset
 
 # scipy <= 0.15
@@ -39,12 +39,23 @@ cdef REAL_t[EXP_TABLE_SIZE] LOG_TABLE
 cdef int ONE = 1
 cdef REAL_t ONEF = <REAL_t>1.0
 
+# NEW:
+cdef REAL_t logaddexp(REAL_t x, REAL_t y) nogil:
+    cdef REAL_t tmp
+    tmp = x - y
+    if tmp > 0:
+        return x + log1p(exp(-tmp))
+    elif tmp <= 0:
+        return y + log1p(exp(tmp))
+    else:
+        return x + y
+
 cdef unsigned long long fasttext_fast_sentence_sg_neg(
     const int negative, np.uint32_t *cum_table, unsigned long long cum_table_len,
     REAL_t *syn0_vocab, REAL_t *syn0_ngrams, REAL_t *syn1neg, const int size,
     const np.uint32_t word_index, const np.uint32_t word2_index, const np.uint32_t *subwords_index,
     const np.uint32_t subwords_len, const REAL_t alpha, REAL_t *work, REAL_t *l1, unsigned long long next_random,
-    REAL_t *word_locks_vocab, REAL_t *word_locks_ngrams) nogil:
+    REAL_t *word_locks_vocab, REAL_t *word_locks_ngrams, const int learn_hidden, const int learn_vectors) nogil:
 
     cdef long long a
     cdef long long row1 = word2_index * size, row2
@@ -80,10 +91,12 @@ cdef unsigned long long fasttext_fast_sentence_sg_neg(
         f = EXP_TABLE[<int>((f_dot + MAX_EXP) * (EXP_TABLE_SIZE / MAX_EXP / 2))]
         g = (label - f) * alpha
         our_saxpy(&size, &g, &syn1neg[row2], &ONE, work, &ONE)
-        our_saxpy(&size, &g, l1, &ONE, &syn1neg[row2], &ONE)
-    our_saxpy(&size, &word_locks_vocab[word2_index], work, &ONE, &syn0_vocab[row1], &ONE)
-    for d in range(subwords_len):
-        our_saxpy(&size, &word_locks_ngrams[subwords_index[d]], work, &ONE, &syn0_ngrams[subwords_index[d]*size], &ONE)
+        if learn_hidden:
+            our_saxpy(&size, &g, l1, &ONE, &syn1neg[row2], &ONE)
+    if learn_vectors:
+        our_saxpy(&size, &word_locks_vocab[word2_index], work, &ONE, &syn0_vocab[row1], &ONE)
+        for d in range(subwords_len):
+            our_saxpy(&size, &word_locks_ngrams[subwords_index[d]], work, &ONE, &syn0_ngrams[subwords_index[d]*size], &ONE)
     return next_random
 
 
@@ -92,7 +105,7 @@ cdef void fasttext_fast_sentence_sg_hs(
     REAL_t *syn0_vocab, REAL_t *syn0_ngrams, REAL_t *syn1, const int size,
     const np.uint32_t word2_index, const np.uint32_t *subwords_index, const np.uint32_t subwords_len,
     const REAL_t alpha, REAL_t *work, REAL_t *l1, REAL_t *word_locks_vocab,
-    REAL_t *word_locks_ngrams) nogil:
+    REAL_t *word_locks_ngrams, const int learn_hidden, const int learn_vectors) nogil:
 
     cdef long long a, b
     cdef long long row1 = word2_index * size, row2, sgn
@@ -116,11 +129,13 @@ cdef void fasttext_fast_sentence_sg_hs(
         g = (1 - word_code[b] - f) * alpha
 
         our_saxpy(&size, &g, &syn1[row2], &ONE, work, &ONE)
-        our_saxpy(&size, &g, l1, &ONE, &syn1[row2], &ONE)
+        if learn_hidden:
+            our_saxpy(&size, &g, l1, &ONE, &syn1[row2], &ONE)
 
-    our_saxpy(&size, &word_locks_vocab[word2_index], work, &ONE, &syn0_vocab[row1], &ONE)
-    for d in range(subwords_len):
-        our_saxpy(&size, &word_locks_ngrams[subwords_index[d]], work, &ONE, &syn0_ngrams[subwords_index[d]*size], &ONE)
+    if learn_vectors:
+        our_saxpy(&size, &word_locks_vocab[word2_index], work, &ONE, &syn0_vocab[row1], &ONE)
+        for d in range(subwords_len):
+            our_saxpy(&size, &word_locks_ngrams[subwords_index[d]], work, &ONE, &syn0_ngrams[subwords_index[d]*size], &ONE)
 
 
 cdef unsigned long long fasttext_fast_sentence_cbow_neg(
@@ -128,7 +143,7 @@ cdef unsigned long long fasttext_fast_sentence_cbow_neg(
     REAL_t *neu1,  REAL_t *syn0_vocab, REAL_t *syn0_ngrams, REAL_t *syn1neg, const int size,
     const np.uint32_t indexes[MAX_SENTENCE_LEN], np.uint32_t *subwords_idx[MAX_SENTENCE_LEN],
     const int subwords_idx_len[MAX_SENTENCE_LEN], const REAL_t alpha, REAL_t *work,
-    int i, int j, int k, int cbow_mean, unsigned long long next_random, REAL_t *word_locks_vocab, REAL_t *word_locks_ngrams) nogil:
+    int i, int j, int k, int cbow_mean, unsigned long long next_random, REAL_t *word_locks_vocab, REAL_t *word_locks_ngrams, const int learn_hidden, const int learn_vectors) nogil:
 
     cdef long long a
     cdef long long row2
@@ -176,7 +191,8 @@ cdef unsigned long long fasttext_fast_sentence_cbow_neg(
         g = (label - f) * alpha
 
         our_saxpy(&size, &g, &syn1neg[row2], &ONE, work, &ONE)
-        our_saxpy(&size, &g, neu1, &ONE, &syn1neg[row2], &ONE)
+        if learn_hidden:
+            our_saxpy(&size, &g, neu1, &ONE, &syn1neg[row2], &ONE)
 
     if not cbow_mean:  # divide error over summed window vectors
         sscal(&size, &inv_count, work, &ONE)
@@ -184,9 +200,11 @@ cdef unsigned long long fasttext_fast_sentence_cbow_neg(
     for m in range(j,k):
         if m == i:
             continue
-        our_saxpy(&size, &word_locks_vocab[indexes[m]], work, &ONE, &syn0_vocab[indexes[m]*size], &ONE)
-        for d in range(subwords_idx_len[m]):
-            our_saxpy(&size, &word_locks_ngrams[subwords_idx[m][d]], work, &ONE, &syn0_ngrams[subwords_idx[m][d]*size], &ONE)
+        else:
+            if learn_vectors:
+                our_saxpy(&size, &word_locks_vocab[indexes[m]], work, &ONE, &syn0_vocab[indexes[m]*size], &ONE)
+                for d in range(subwords_idx_len[m]):
+                    our_saxpy(&size, &word_locks_ngrams[subwords_idx[m][d]], work, &ONE, &syn0_ngrams[subwords_idx[m][d]*size], &ONE)
 
     return next_random
 
@@ -196,7 +214,7 @@ cdef void fasttext_fast_sentence_cbow_hs(
     REAL_t *neu1, REAL_t *syn0_vocab, REAL_t *syn0_ngrams, REAL_t *syn1, const int size,
     const np.uint32_t indexes[MAX_SENTENCE_LEN], np.uint32_t *subwords_idx[MAX_SENTENCE_LEN],
     const int subwords_idx_len[MAX_SENTENCE_LEN],const REAL_t alpha, REAL_t *work,
-    int i, int j, int k, int cbow_mean, REAL_t *word_locks_vocab, REAL_t *word_locks_ngrams) nogil:
+    int i, int j, int k, int cbow_mean, REAL_t *word_locks_vocab, REAL_t *word_locks_ngrams, const int learn_hidden, const int learn_vectors) nogil:
 
     cdef long long a, b
     cdef long long row2, sgn
@@ -228,7 +246,8 @@ cdef void fasttext_fast_sentence_cbow_hs(
         g = (1 - word_code[b] - f) * alpha
 
         our_saxpy(&size, &g, &syn1[row2], &ONE, work, &ONE)
-        our_saxpy(&size, &g, neu1, &ONE, &syn1[row2], &ONE)
+        if learn_hidden:
+            our_saxpy(&size, &g, neu1, &ONE, &syn1[row2], &ONE)
 
     if not cbow_mean:  # divide error over summed window vectors
         sscal(&size, &inv_count, work, &ONE)
@@ -236,9 +255,11 @@ cdef void fasttext_fast_sentence_cbow_hs(
     for m in range(j,k):
         if m == i:
             continue
-        our_saxpy(&size, &word_locks_vocab[indexes[m]], work, &ONE, &syn0_vocab[indexes[m]*size], &ONE)
-        for d in range(subwords_idx_len[m]):
-            our_saxpy(&size, &word_locks_ngrams[subwords_idx[m][d]], work, &ONE, &syn0_ngrams[subwords_idx[m][d]*size], &ONE)
+        else:
+            if learn_vectors:
+                our_saxpy(&size, &word_locks_vocab[indexes[m]], work, &ONE, &syn0_vocab[indexes[m]*size], &ONE)
+                for d in range(subwords_idx_len[m]):
+                    our_saxpy(&size, &word_locks_ngrams[subwords_idx[m][d]], work, &ONE, &syn0_ngrams[subwords_idx[m][d]*size], &ONE)
 
 
 cdef init_ft_config(FastTextConfig *c, model, alpha, _work, _neu1):
@@ -256,6 +277,9 @@ cdef init_ft_config(FastTextConfig *c, model, alpha, _work, _neu1):
 
     c[0].alpha = alpha
     c[0].size = model.wv.vector_size
+
+    c[0].learn_hidden = model.learn_hidden
+    c[0].learn_vectors = model.learn_vectors
 
     if c[0].hs:
         c[0].syn1 = <REAL_t *>(np.PyArray_DATA(model.trainables.syn1))
@@ -362,12 +386,12 @@ def train_batch_sg(model, sentences, alpha, _work, _l1):
                         fasttext_fast_sentence_sg_hs(
                             c.points[j], c.codes[j], c.codelens[j], c.syn0_vocab, c.syn0_ngrams, c.syn1, c.size,
                             c.indexes[i], c.subwords_idx[i], c.subwords_idx_len[i], c.alpha, c.work, c.neu1,
-                            c.word_locks_vocab, c.word_locks_ngrams)
+                            c.word_locks_vocab, c.word_locks_ngrams, c.learn_hidden, c.learn_vectors)
                     if c.negative:
                         c.next_random = fasttext_fast_sentence_sg_neg(
                             c.negative, c.cum_table, c.cum_table_len, c.syn0_vocab, c.syn0_ngrams, c.syn1neg, c.size,
                             c.indexes[j], c.indexes[i], c.subwords_idx[i], c.subwords_idx_len[i], c.alpha, c.work,
-                            c.neu1, c.next_random, c.word_locks_vocab, c.word_locks_ngrams)
+                            c.neu1, c.next_random, c.word_locks_vocab, c.word_locks_ngrams, c.learn_hidden, c.learn_vectors)
 
     return effective_words
 
@@ -469,12 +493,12 @@ def train_batch_cbow(model, sentences, alpha, _work, _neu1):
                     fasttext_fast_sentence_cbow_hs(
                         c.points[i], c.codes[i], c.codelens, c.neu1, c.syn0_vocab, c.syn0_ngrams, c.syn1, c.size,
                         c.indexes, c.subwords_idx, c.subwords_idx_len, c.alpha, c.work, i, j, k, c.cbow_mean,
-                        c.word_locks_vocab, c.word_locks_ngrams)
+                        c.word_locks_vocab, c.word_locks_ngrams, c.learn_hidden, c.learn_vectors)
                 if c.negative:
                     c.next_random = fasttext_fast_sentence_cbow_neg(
                         c.negative, c.cum_table, c.cum_table_len, c.codelens, c.neu1, c.syn0_vocab, c.syn0_ngrams,
                         c.syn1neg, c.size, c.indexes, c.subwords_idx, c.subwords_idx_len, c.alpha, c.work, i, j, k,
-                        c.cbow_mean, c.next_random, c.word_locks_vocab, c.word_locks_ngrams)
+                        c.cbow_mean, c.next_random, c.word_locks_vocab, c.word_locks_ngrams, c.learn_hidden, c.learn_vectors)
 
     return effective_words
 

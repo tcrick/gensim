@@ -20,7 +20,7 @@ DEF MAX_SENTENCE_LEN = 10000
 
 
 cdef struct FastTextConfig:
-    int hs, negative, sample, size, window, cbow_mean, workers
+    int hs, negative, sample, size, window, cbow_mean, workers, learn_hidden, learn_vectors
     REAL_t alpha
 
     REAL_t *syn0_vocab
@@ -58,7 +58,7 @@ cdef unsigned long long fasttext_fast_sentence_sg_neg(
     REAL_t *syn0_vocab, REAL_t *syn0_ngrams, REAL_t *syn1neg, const int size,
     const np.uint32_t word_index, const np.uint32_t word2_index, const np.uint32_t *subwords_index,
     const np.uint32_t subwords_len, const REAL_t alpha, REAL_t *work, REAL_t *l1, unsigned long long next_random,
-    REAL_t *word_locks_vocab, REAL_t *word_locks_ngrams) nogil
+    REAL_t *word_locks_vocab, REAL_t *word_locks_ngrams, const int learn_hidden, const int learn_vectors) nogil
 
 
 cdef void fasttext_fast_sentence_sg_hs(
@@ -66,7 +66,7 @@ cdef void fasttext_fast_sentence_sg_hs(
     REAL_t *syn0_vocab, REAL_t *syn0_ngrams, REAL_t *syn1, const int size,
     const np.uint32_t word2_index, const np.uint32_t *subwords_index, const np.uint32_t subwords_len,
     const REAL_t alpha, REAL_t *work, REAL_t *l1, REAL_t *word_locks_vocab,
-    REAL_t *word_locks_ngrams) nogil
+    REAL_t *word_locks_ngrams, const int learn_hidden, const int learn_vectors) nogil
 
 
 cdef unsigned long long fasttext_fast_sentence_cbow_neg(
@@ -74,7 +74,7 @@ cdef unsigned long long fasttext_fast_sentence_cbow_neg(
     REAL_t *neu1,  REAL_t *syn0_vocab, REAL_t *syn0_ngrams, REAL_t *syn1neg, const int size,
     const np.uint32_t indexes[MAX_SENTENCE_LEN], np.uint32_t *subwords_idx[MAX_SENTENCE_LEN],
     const int subwords_idx_len[MAX_SENTENCE_LEN], const REAL_t alpha, REAL_t *work,
-    int i, int j, int k, int cbow_mean, unsigned long long next_random, REAL_t *word_locks_vocab, REAL_t *word_locks_ngrams) nogil
+    int i, int j, int k, int cbow_mean, unsigned long long next_random, REAL_t *word_locks_vocab, REAL_t *word_locks_ngrams, const int learn_hidden, const int learn_vectors) nogil
 
 
 cdef void fasttext_fast_sentence_cbow_hs(
@@ -82,7 +82,7 @@ cdef void fasttext_fast_sentence_cbow_hs(
     REAL_t *neu1, REAL_t *syn0_vocab, REAL_t *syn0_ngrams, REAL_t *syn1, const int size,
     const np.uint32_t indexes[MAX_SENTENCE_LEN], np.uint32_t *subwords_idx[MAX_SENTENCE_LEN],
     const int subwords_idx_len[MAX_SENTENCE_LEN], const REAL_t alpha, REAL_t *work,
-    int i, int j, int k, int cbow_mean, REAL_t *word_locks_vocab, REAL_t *word_locks_ngrams) nogil
+    int i, int j, int k, int cbow_mean, REAL_t *word_locks_vocab, REAL_t *word_locks_ngrams, const int learn_hidden, const int learn_vectors) nogil
 
 
 cdef init_ft_config(FastTextConfig *c, model, alpha, _work, _neu1)
